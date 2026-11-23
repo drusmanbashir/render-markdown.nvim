@@ -516,4 +516,49 @@ describe('table wrapping', function()
             'AFTER',
         })
     end)
+
+    it('wrapped row keeps line highlights from other namespaces', function()
+        util.setup.text(lines, { pipe_table = { cell = 'trimmed' } })
+        local ns = vim.api.nvim_create_namespace('other.plugin')
+        vim.api.nvim_buf_set_extmark(0, ns, 4, 0, {
+            end_row = 5,
+            end_col = 0,
+            hl_group = 'DiffAdd',
+            hl_eol = true,
+            priority = 200,
+        })
+        util.set_row(1)
+
+        local ui = require('render-markdown.core.ui')
+        local wrapped = {} ---@type table[]
+        local marks = vim.api.nvim_buf_get_extmarks(0, ui.ns, 0, -1, {
+            details = true,
+        })
+        for _, mark in ipairs(marks) do
+            local virt_lines = mark[4].virt_lines or {}
+            if #virt_lines > #wrapped then
+                wrapped = virt_lines
+            end
+        end
+        ---@param line table
+        ---@return boolean
+        local function painted(line)
+            for _, chunk in ipairs(line) do
+                local hl = chunk[2]
+                if type(hl) ~= 'table' or hl[#hl] ~= 'DiffAdd' then
+                    return false
+                end
+            end
+            return true
+        end
+        -- bold row wraps to 3 lines, short row to 4
+        assert.same(7, #wrapped)
+        for i = 1, 3 do
+            assert.is_true(painted(wrapped[i]), 'bold row line ' .. i)
+        end
+        for i = 4, 7 do
+            assert.is_false(painted(wrapped[i]), 'unmarked line ' .. i)
+        end
+        util.assert_screen(rendered)
+    end)
 end)

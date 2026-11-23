@@ -74,7 +74,7 @@ function Decorator:display(ns, hide)
     end
 
     local line_count = vim.api.nvim_buf_line_count(self.buf)
-    local generated = replacements.resolve(visible, line_count)
+    local generated = replacements.resolve(self.buf, ns, visible, line_count)
     local current = {} ---@type render.md.Mark[]
     for _, extmark in ipairs(self.generated) do
         current[#current + 1] = extmark:get()
